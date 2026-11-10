@@ -1,0 +1,4 @@
+interface:
+  display_name: "Car Air Data Query"
+  short_description: "Query product stock, Ref. Price, and cached customer prices"
+  default_prompt: "Use $query-carair-products to check product data or a cached customer sales-invoice price."
