@@ -1,18 +1,9 @@
-# 团队管理员部署与权限说明
+# Administrator setup and rotation
 
-## 首次开通
+1. Deploy and separately authorize the company management system's development schema, persistent private image directory, and `development.enabled` setting. Complete and reconcile the one-time Lark migration before switching employees. The private directory must be outside `server/public` and included in protected backups.
+2. Grant the `development/*` menu permissions to the appropriate employee roles. Keep `development/reviewStage` separate from creation/transition permissions; the server rejects self-review. Only root administrators can issue, list, and revoke Codex draft tokens.
+3. For each employee, issue a separate scoped draft token in the development page. Show it once; the employee stores it with `workflow.py configure-credential` on their machine. Rotate by issuing a replacement and revoking the prior token. Do not distribute tokens through chat.
+4. Keep `query-carair-products` read-only token separate. Its scope and access are unchanged.
+5. Verify product `health` and research `inspect` without writing. Run `apply` only for an authorized real research item after the module and migration have passed acceptance.
 
-1. 确认生产网站的 `/api/codex/*` 只读端点可用，访问受 Token 控制。当前后端只接受一个共享只读 Token；给成员开通前核实其职务确实需要商品、库存、Ref. Price、客户身份及缓存成交价。不要授予数据库、SSH、管理员 API 或写入能力。
-2. 在公司密码管理器中逐人共享 Token。禁止通过 GitHub、聊天消息、邮件正文、命令参数或公开文档发送。成员运行 `configure-credential`，令 Token 留在其本机的 Keychain/Credential Manager。
-3. 每位成员用 `lark-cli config init --new` 创建自己的应用，完成租户要求的应用审批。只启用工作流所需 `bitable:app` Scope，成员用本人 OAuth 登录。给员工及其应用授权同行目录只读、开款目标 Base 读写及附件操作。先用 `inspect` 验证，只在批准的试点记录上验证 `apply`。
-4. 记录已开通成员、应用 ID、开通日期和所授 Base 权限，**不记录** App Secret 或产品 API Token。离职或转岗时撤销其 Base 访问、应用权限和密码管理器共享，并安排产品 API Token 轮换。
-
-## 共享 Token 轮换
-
-当前共享 Token 不能按成员单独撤销，也不能可靠地把 API 请求归因到个人。若任一成员设备丢失、凭据疑似泄露或成员离岗，管理员在后端轮换 Token，更新密码管理器中的共享项，通知仍获授权的成员在本机重新运行 `configure-credential`，最后用 `health` 验证旧 Token 已失效、新 Token 可用。轮换可能短暂影响所有成员。后续应把后端升级为每人独立的只读 Token，以支持单独撤销和审计。
-
-## 发布与更新
-
-公共仓库只发布当前审查过的文件并从全新 Git 历史开始；不要推送两份私有仓库的旧提交。发布前检查提交清单及差异，搜索 Token、私钥、`.env`、客户名称/联系方式、真实草稿和本机绝对路径。对两个 Skill 运行测试，使用临时 `CODEX_HOME` 从公共仓库安装两个路径并确认不带凭据时安全失败。真实 API/Base 的端到端检查只在已授权的试点设备上运行。
-
-更新 Skill 时，Codex 安装器不会覆盖已有目标目录。先确认新版本，关闭可能正在运行的工作流，再替换相应 Skill 目录；系统凭据库不在 Skill 目录中。原私有仓库暂留作回退，但 README 应指向新公共仓库，避免团队继续从旧版安装。
+The company project is the source of truth after cutover. Lark is retained as read-only history; normal Skill execution makes no Lark API calls.
