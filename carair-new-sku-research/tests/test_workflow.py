@@ -72,16 +72,16 @@ class WorkflowTests(unittest.TestCase):
     def test_exact_duplicate_stops_before_upload(self):
         path = self.save(draft(self.image))
         fresh = {"reviewed_product_codes":[],"development_candidates":[{"id":7,"exact_reference":True}]}
-        with patch.object(workflow, "inspect", return_value=fresh), patch.object(workflow.development_api,"call") as api:
+        with patch.object(workflow, "inspect", return_value=fresh), patch.object(workflow.development_api,"call",return_value={}) as api:
             with self.assertRaises(workflow.WorkflowError): workflow.apply(path)
-            api.assert_not_called()
+            self.assertEqual(api.call_count,1)
 
     def test_changed_candidates_stop_before_upload(self):
         path = self.save(draft(self.image))
         fresh = {"reviewed_product_codes":["CXA-1"],"development_candidates":[]}
-        with patch.object(workflow, "inspect", return_value=fresh), patch.object(workflow.development_api,"call") as api:
+        with patch.object(workflow, "inspect", return_value=fresh), patch.object(workflow.development_api,"call",return_value={}) as api:
             with self.assertRaises(workflow.WorkflowError): workflow.apply(path)
-            api.assert_not_called()
+            self.assertEqual(api.call_count,1)
 
     def test_apply_uploads_then_posts_idempotent_draft(self):
         path = self.save(draft(self.image))
@@ -89,6 +89,7 @@ class WorkflowTests(unittest.TestCase):
         calls=[]
         def fake_call(method, endpoint, **kwargs):
             calls.append(endpoint)
+            if endpoint=="result": return {}
             if endpoint=="uploads": return {"upload_token":"staged123"}
             if endpoint=="drafts":
                 self.assertEqual(kwargs["payload"]["request_key"],"test-request-12345678")
@@ -99,21 +100,33 @@ class WorkflowTests(unittest.TestCase):
         with patch.object(workflow,"inspect",return_value=fresh),patch.object(workflow.development_api,"call",side_effect=fake_call), \
              patch.object(workflow.development_api,"base_url",return_value="https://example.com"),contextlib.redirect_stdout(out):
             workflow.apply(path)
-        self.assertEqual(calls,["uploads","drafts"])
+        self.assertEqual(calls,["result","uploads","drafts"])
         self.assertEqual(json.loads(out.getvalue())["record_id"],42)
 
     def test_ambiguous_write_uses_request_key_result(self):
         path=self.save(draft(self.image))
         fresh={"reviewed_product_codes":[],"development_candidates":[]}
+        result_calls=0
         def fake_call(method,endpoint,**kwargs):
+            nonlocal result_calls
             if endpoint=="uploads":return {"upload_token":"temp"}
             if endpoint=="drafts":raise RuntimeError("connection lost")
-            if endpoint=="result":return {"project_id":42}
+            if endpoint=="result":
+                result_calls+=1
+                return {} if result_calls==1 else {"project_id":42}
             self.fail(endpoint)
         out=io.StringIO()
         with patch.object(workflow,"inspect",return_value=fresh),patch.object(workflow.development_api,"call",side_effect=fake_call), \
              patch.object(workflow.development_api,"base_url",return_value="https://example.com"),contextlib.redirect_stdout(out):
             workflow.apply(path)
         self.assertEqual(json.loads(out.getvalue())["record_id"],42)
+
+    def test_retry_checks_result_before_inspect_or_upload(self):
+        path=self.save(draft(self.image))
+        with patch.object(workflow,"inspect") as inspect, patch.object(workflow.development_api,"call",return_value={"project_id":42}) as api, \
+             patch.object(workflow.development_api,"base_url",return_value="https://example.com"),contextlib.redirect_stdout(io.StringIO()):
+            workflow.apply(path)
+            inspect.assert_not_called()
+            api.assert_called_once()
 
 if __name__=="__main__":unittest.main()
