@@ -59,6 +59,12 @@ def product_search(queries):
     result=[]
     for query in dict.fromkeys(q.strip() for q in queries if len(q.strip())>=2):
         data=run_json([*prefix,str(path),"search",query,"--limit","20"])
+        total=int((data.get("data") or {}).get("total",0))
+        if total>200:raise WorkflowError("Internal product candidates exceed 200; narrow the reference or model search")
+        for offset in range(20,total,20):
+            page=run_json([*prefix,str(path),"search",query,"--limit","20","--offset",str(offset)])
+            data["data"]["items"].extend((page.get("data") or {}).get("items",[]))
+        if len((data.get("data") or {}).get("items",[]))<total:raise WorkflowError("Internal product search returned incomplete results")
         result.append({"query":query,"data":data.get("data"),"connection":data.get("connection")})
     if not result: raise WorkflowError("At least one product search query is required")
     return result
