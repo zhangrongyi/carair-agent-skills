@@ -43,6 +43,14 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(workflow.reference_queries("ZETWIND 790482; DENSO DCP51012"),
                          ["ZETWIND 790482", "790482", "DENSO DCP51012", "DCP51012"])
 
+    def test_product_search_reads_all_candidates(self):
+        first={"ok":True,"data":{"total":21,"items":[{"product_code":str(i)} for i in range(20)]}}
+        second={"ok":True,"data":{"total":21,"items":[{"product_code":"20"}]}}
+        with patch.object(workflow,"product_client",return_value=Path("/tmp/query.py")),patch.object(workflow,"run_json",side_effect=[first,second]) as run:
+            found=workflow.product_search(["790482"])
+        self.assertEqual(len(found[0]["data"]["items"]),21)
+        self.assertEqual(run.call_count,2)
+
     def test_inspect_requires_both_internal_sources(self):
         with patch.object(workflow, "product_search", return_value=[{"query":"790482"}]), \
              patch.object(workflow.development_api, "call", return_value={"development_candidates":[],"peer_sources":[]}):
