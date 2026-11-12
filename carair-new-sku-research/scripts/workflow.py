@@ -140,6 +140,12 @@ def validate_draft(draft):
 
 def apply(path):
     draft=json.loads(Path(path).read_text(encoding="utf-8"));urls=validate_draft(draft)
+    previous=development_api.call("GET","result",query={"request_key":draft["request_key"]})
+    if previous:
+        emit({"ok":True,"decision":draft["decision"],"record_id":int(previous["project_id"]),"replayed":True,
+              "record_url":development_api.base_url()+"/admin/development",
+              "human_review":"请在公司后台核对字段、图片与适配；待核实事项不得当作确认适配。"})
+        return
     f=draft["fields"];fresh=inspect(f.get("外部参考编号",""),f["车型"],f["类目"])
     current_codes=sorted(fresh.get("reviewed_product_codes",[]));reviewed_codes=sorted(draft["reviewed_product_codes"])
     current_ids=sorted(int(x["id"]) for x in fresh.get("development_candidates",[]));reviewed_ids=sorted(int(x) for x in draft["reviewed_development_record_ids"])
