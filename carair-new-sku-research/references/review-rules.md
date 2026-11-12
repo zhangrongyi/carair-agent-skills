@@ -8,7 +8,7 @@
 
 External listings may corroborate a name and reference number without confirming physical fitment. Compare category-specific differences such as condenser dimensions, pipe positions, mounting points, fittings, and included accessories. For compressors, check drive type, connector shape and position, pipe ports, mounting feet, refrigerant/oil requirements, and exact vehicle/engine variant. If these checks are missing, mark them pending in `采购说明` and `unresolved`; the information-collection row may still be created, but it must not claim verified customer-vehicle fitment.
 
-When two sources conflict, show both and do not choose by search ranking. For market price, record currency, date, listing condition, pack size, and retail versus wholesale context. Empty or stale prices stay out of the Lark price field. Send the source-backed row to the employee for human review after writing; correction or advancement to purchasing stages follows that review.
+When two sources conflict, show both and do not choose by search ranking. For market price, record currency, date, listing condition, pack size, and retail versus wholesale context. Empty or stale prices stay out of the company project price field. Send the source-backed row to the employee for human review after writing; correction or advancement to purchasing stages follows that review.
 
 ## Example label
 
